@@ -11,7 +11,20 @@ namespace CrawlWeb
 {
     static class MultipleClient
     {
-        public static async Task Login(Account account, HttpClient client)
+        public static void RunLogin(IEnumerable<List<Account>> accountChunks)
+        {
+            Parallel.ForEach(accountChunks, accountChunk =>
+            {
+                CookieContainer cookieContainer = new();
+                using HttpClientHandler handler = new() { CookieContainer = cookieContainer };
+                using HttpClient client = new(handler) { BaseAddress = Program.BaseUri };
+                foreach (var account in accountChunk)
+                {
+                    Login(account, client).GetAwaiter().GetResult();
+                }
+            });
+        }
+        private static async Task Login(Account account, HttpClient client)
         {
             var threadId = Thread.CurrentThread.ManagedThreadId;
             HtmlDocument document = new();
@@ -33,6 +46,8 @@ namespace CrawlWeb
 
             // TODO: add parsing and split this out
             result = await client.GetStringAsync("/ket-qua-thi-sinh");
+            if (result.Contains("Đăng nhập"))
+            document.LoadHtml(result);
             // TODO: check wrong password
 
             _ = await client.GetAsync("/logout");
