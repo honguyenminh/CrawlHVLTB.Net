@@ -9,6 +9,13 @@ using System.Threading.Tasks;
 
 namespace CrawlWeb
 {
+    /// <summary>
+    /// A crawler that creates new clients for every thread
+    /// </summary>
+    /// <remarks>
+    /// This can quickly exhaust all available sockets with high concurrency<br/>
+    /// Use <see cref="SingleClientCrawler"/> instead for these cases
+    /// </remarks>
     public class MultipleClientCrawler : Crawler
     {
         public override void RunLogin(IEnumerable<List<Account>> accountChunks)
@@ -52,6 +59,8 @@ namespace CrawlWeb
             // TODO: check wrong password
 
             _ = await client.GetAsync("/logout");
+
+            throw new NotImplementedException("Does not check for wrong password");
             // Clear cookies
             //var cookies = cookieContainer.GetCookies(baseUri);
             //foreach (Cookie cookie in cookies) cookie.Expired = true;

@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace CrawlWeb
 {
+    /// <summary>
+    /// A crawler that uses only one client for all operations
+    /// </summary>
     public class SingleClientCrawler : Crawler
     {
         private readonly HttpClient client;

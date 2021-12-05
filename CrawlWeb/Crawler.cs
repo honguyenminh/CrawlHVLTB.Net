@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace CrawlWeb
 {
+    /// <summary>
+    /// Represent a multi-threaded crawler
+    /// </summary>
     public abstract class Crawler
     {
         public static Uri BaseUri { get; } = new("https://hocvalamtheobac.vn");
