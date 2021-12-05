@@ -13,7 +13,7 @@ namespace CrawlWeb
     {
         static void Main(string[] args)
         {
-            Crawler crawler = new MultipleClientCrawler();
+            Crawler crawler = new SingleClientCrawler();
             Console.WriteLine("CrawlHVLTB.Net v0.1pre - Author: honguyenminh");
             Console.WriteLine("Distributed under GPLv3");
             Console.WriteLine("GitHub: https://github.com/honguyenminh/CrawlHVLTB.Net");
