@@ -9,15 +9,15 @@ using System.Threading.Tasks;
 
 namespace CrawlWeb
 {
-    static class MultipleClient
+    public class MultipleClientCrawler : Crawler
     {
-        public static void RunLogin(IEnumerable<List<Account>> accountChunks)
+        public override void RunLogin(IEnumerable<List<Account>> accountChunks)
         {
             Parallel.ForEach(accountChunks, accountChunk =>
             {
                 CookieContainer cookieContainer = new();
                 using HttpClientHandler handler = new() { CookieContainer = cookieContainer };
-                using HttpClient client = new(handler) { BaseAddress = Program.BaseUri };
+                using HttpClient client = new(handler) { BaseAddress = BaseUri };
                 foreach (var account in accountChunk)
                 {
                     Login(account, client).GetAwaiter().GetResult();
@@ -32,7 +32,8 @@ namespace CrawlWeb
             document.LoadHtml(result);
 
             var tokenField = document.DocumentNode.SelectSingleNode("/html/body/div/div/div/div[2]/div/form/input");
-            if (tokenField is null) throw new NodeNotFoundException($"Thread #{threadId}: Cannot find token input in page for user " + account.Username);
+            if (tokenField is null) 
+                throw new NodeNotFoundException($"Thread #{threadId}: Cannot find token input in page for user " + account.Username);
             string token = tokenField.GetAttributeValue("value", "owo");
             if (token == "owo") throw new NodeAttributeNotFoundException("Cannot find 'value' attribute in token input");
 

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CrawlWeb
 {
-    class Account
+    public class Account
     {
         public string Username { get; set; }
         public string Password { get; set; }

@@ -11,11 +11,9 @@ namespace CrawlWeb
 {
     partial class Program
     {
-        public static Uri BaseUri { get; } = new("https://hocvalamtheobac.vn");
-        private const int concurrentThreads = 200;
-
         static void Main(string[] args)
         {
+            Crawler crawler = new MultipleClientCrawler();
             Console.WriteLine("CrawlHVLTB.Net v0.1pre - Author: honguyenminh");
             Console.WriteLine("Distributed under GPLv3");
             Console.WriteLine("GitHub: https://github.com/honguyenminh/CrawlHVLTB.Net");
@@ -32,12 +30,12 @@ namespace CrawlWeb
             {
                 accounts.Add(new() { Username = input[i], Password = input[i + 1] });
             }
-            var accountChunks = SplitList(accounts, (int)Math.Ceiling((decimal)accounts.Count / concurrentThreads));
+            var accountChunks = SplitList(accounts, (int)Math.Ceiling((decimal)accounts.Count / crawler.ConcurrentThreads));
 
             Console.WriteLine("Total " + accounts.Count + " accounts");
-            Console.WriteLine("Using " + concurrentThreads + " threads");
-            MultipleClient.RunLogin(accountChunks);
+            Console.WriteLine("Using " + crawler.ConcurrentThreads + " threads");
 
+            crawler.RunLogin(accountChunks);
             stopwatch.Stop();
             Console.WriteLine("Exec time: " + stopwatch.ElapsedMilliseconds + "ms");
         }
