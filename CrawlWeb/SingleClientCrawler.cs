@@ -1,10 +1,9 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,7 +35,15 @@ namespace CrawlWeb
                 HtmlDocument document = new();
                 foreach (var account in accountChunk)
                 {
-                    Login(account, document).GetAwaiter().GetResult();
+                    try
+                    {
+                        Login(account, document).GetAwaiter().GetResult();
+                    }
+                    catch (Exception e)
+                    {
+                        var threadId = Thread.CurrentThread.ManagedThreadId;
+                        Console.WriteLine($"[ERROR] Thread #{threadId}: {e.Message}");
+                    }
                 }
             });
         }
@@ -47,7 +54,7 @@ namespace CrawlWeb
             var response = await client.GetAsync("/login");
             // Get cookies
             var cookiesHeaders = response.Headers.GetValues("Set-Cookie");
-            var cookies = from header in cookiesHeaders select GetRequestHeader(header);
+            var cookies = from header in cookiesHeaders select Helper.GetRequestHeader(header);
             // Get token
             var result = await response.Content.ReadAsStringAsync();
             document.LoadHtml(result);
@@ -55,7 +62,7 @@ namespace CrawlWeb
             if (tokenField is null)
                 throw new NodeNotFoundException($"Cannot find token input in login page for user " + account.Username);
             string token = tokenField.GetAttributeValue("value", "owo");
-            if (token == "owo") throw new NodeAttributeNotFoundException("Cannot find 'value' attribute in token input");
+            if (token == "owo") throw new NodeAttributeNotFoundException("Cannot find 'value' attribute in token input at username " + account.Username);
 
             // Make POST request to /login with previous cookies and token to actually log in
             var message = new HttpRequestMessage(HttpMethod.Post, "/login");
@@ -69,30 +76,37 @@ namespace CrawlWeb
             response = await client.SendAsync(message);
             result = await response.Content.ReadAsStringAsync();
             // Check if credentials are correct
-            document.LoadHtml(result);
-            string title = document.DocumentNode.SelectSingleNode("/html/head/title").InnerText;
-            if (title.Contains("Đăng nhập")) throw new ArgumentException("Wrong credentials at username " + account.Username);
+            if (result.Contains("http://hocvalamtheobac.vn/login"))
+                throw new ArgumentException("Wrong credentials at username " + account.Username);
             // Get cookies again
             cookiesHeaders = response.Headers.GetValues("Set-Cookie");
-            cookies = from header in cookiesHeaders select GetRequestHeader(header);
+            cookies = from header in cookiesHeaders select Helper.GetRequestHeader(header);
 
             // Make GET request to /ket-qua-thi-sinh to crawl data
             message = new HttpRequestMessage(HttpMethod.Get, "/ket-qua-thi-sinh");
             message.Headers.Add("Cookie", string.Join("; ", cookies));
             response = await client.SendAsync(message);
-            // Get cookies again
-            cookiesHeaders = response.Headers.GetValues("Set-Cookie");
-            cookies = from header in cookiesHeaders select GetRequestHeader(header);
+
+            // Parse the HTML
             result = await response.Content.ReadAsStringAsync();
             document.LoadHtml(result);
-        }
 
-        // Better regex: ((\w+)=([^;\s]+))(?:.*;.*)*
-        private static readonly Regex cookieParseRegex = new(@"((\w+)=([^;\s]+))", RegexOptions.Compiled);
-        public static string GetRequestHeader(string responseHeader)
-        {
-            var match = cookieParseRegex.Match(responseHeader);
-            return match.Groups[1].Value;
+            // Get full name of account
+            string fullName = document.DocumentNode.SelectSingleNode("/html/body/div[1]/main/section[1]/div/div/div/div[1]/p/strong")?.InnerText;
+            if (fullName is null) throw new InvalidOperationException("New account, no info found at username " + account.Username);
+            fullName = Helper.ToTitleCase(fullName.Trim());
+
+            // Get body
+            var rows = document.DocumentNode.SelectNodes("//tbody/tr");
+            Dictionary<string, ScoreInfo> bestScoreOfWeek = new();
+            foreach (var row in rows)
+            {
+                // TODO: decide what to do with non-qualification rounds
+                var cells = row.ChildNodes;
+                string week = cells[2].InnerText;
+                int score = int.Parse(cells[4].InnerText);
+                TimeSpan time = Helper.SiteTimeToTimeSpan(cells[5].InnerText);
+            }
         }
     }
 }

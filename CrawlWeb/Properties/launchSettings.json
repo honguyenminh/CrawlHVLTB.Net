@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CrawlWeb": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\Users\\hothikimlien\\Desktop\\accounts.txt"
+    }
+  }
+}

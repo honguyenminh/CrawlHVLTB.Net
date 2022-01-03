@@ -27,7 +27,15 @@ namespace CrawlWeb
                 using HttpClient client = new(handler) { BaseAddress = BaseUri };
                 foreach (var account in accountChunk)
                 {
-                    Login(account, client).GetAwaiter().GetResult();
+                    try
+                    {
+                        Login(account, client).GetAwaiter().GetResult();
+                    }
+                    catch (Exception e)
+                    {
+                        var threadId = Thread.CurrentThread.ManagedThreadId;
+                        Console.WriteLine($"[ERROR] Thread #{threadId}: {e.Message}");
+                    }
                 }
             });
         }
