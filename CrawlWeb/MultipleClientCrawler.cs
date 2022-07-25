@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 namespace CrawlWeb
 {
     /// <summary>
+    /// DEPRECATED. 
     /// A crawler that creates new clients for every thread
     /// </summary>
     /// <remarks>

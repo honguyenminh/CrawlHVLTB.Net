@@ -5,27 +5,22 @@ using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
+using static System.Threading.Thread;
 
 namespace CrawlWeb
 {
     /// <summary>
     /// A crawler that uses only one client for all operations
     /// </summary>
-    public class SingleClientCrawler : Crawler
+    public class SingleClientCrawler : Crawler, IDisposable
     {
-        private readonly HttpClient client;
-        private readonly HttpClientHandler handler;
+        private readonly HttpClient _client;
+        private readonly HttpClientHandler _handler;
         public SingleClientCrawler()
         {
-            handler = new() { UseCookies = false, AllowAutoRedirect = false };
-            client = new(handler) { BaseAddress = BaseUri };
-        }
-        ~SingleClientCrawler()
-        {
-            client.Dispose();
-            handler.Dispose();
+            _handler = new HttpClientHandler { UseCookies = false, AllowAutoRedirect = false };
+            _client = new HttpClient(_handler) { BaseAddress = BaseUri };
         }
 
         public override void RunLogin(IEnumerable<List<Account>> accountChunks)
@@ -41,7 +36,7 @@ namespace CrawlWeb
                     }
                     catch (Exception e)
                     {
-                        var threadId = Thread.CurrentThread.ManagedThreadId;
+                        int threadId = CurrentThread.ManagedThreadId;
                         Console.WriteLine($"[ERROR] Thread #{threadId}: {e.Message}");
                     }
                 }
@@ -51,7 +46,7 @@ namespace CrawlWeb
         {
             // Get session token and cookies first, so make a GET request to /login
             // Make request
-            var response = await client.GetAsync("/login");
+            var response = await _client.GetAsync("/login");
             // Get cookies
             var cookiesHeaders = response.Headers.GetValues("Set-Cookie");
             var cookies = from header in cookiesHeaders select Helper.GetRequestHeader(header);
@@ -73,7 +68,7 @@ namespace CrawlWeb
                 new KeyValuePair<string, string>("username", account.Username),
                 new KeyValuePair<string, string>("password", account.Password),
             });
-            response = await client.SendAsync(message);
+            response = await _client.SendAsync(message);
             result = await response.Content.ReadAsStringAsync();
             // Check if credentials are correct
             if (result.Contains("http://hocvalamtheobac.vn/login"))
@@ -85,14 +80,14 @@ namespace CrawlWeb
             // Make GET request to /ket-qua-thi-sinh to crawl data
             message = new HttpRequestMessage(HttpMethod.Get, "/ket-qua-thi-sinh");
             message.Headers.Add("Cookie", string.Join("; ", cookies));
-            response = await client.SendAsync(message);
+            response = await _client.SendAsync(message);
 
             // Parse the HTML
             result = await response.Content.ReadAsStringAsync();
             document.LoadHtml(result);
 
             // Get full name of account
-            string fullName = document.DocumentNode.SelectSingleNode("/html/body/div[1]/main/section[1]/div/div/div/div[1]/p/strong")?.InnerText;
+            string fullName = document.DocumentNode.SelectSingleNode("/html/body/div[1]/main/section[1]/div/div/div/div[1]/p/strong")?.InnerText ?? throw new InvalidOperationException();
             if (fullName is null) throw new InvalidOperationException("New account, no info found at username " + account.Username);
             fullName = Helper.ToTitleCase(fullName.Trim());
 
@@ -107,6 +102,18 @@ namespace CrawlWeb
                 int score = int.Parse(cells[4].InnerText);
                 TimeSpan time = Helper.SiteTimeToTimeSpan(cells[5].InnerText);
             }
+        }
+
+        public void Dispose()
+        {
+            _client.Dispose();
+            _handler.Dispose();
+            GC.SuppressFinalize(this);
+        }
+
+        ~SingleClientCrawler()
+        {
+            Dispose();
         }
     }
 }
